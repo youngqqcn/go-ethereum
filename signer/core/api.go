@@ -27,7 +27,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/accounts/usbwallet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -238,22 +237,22 @@ func NewSignerAPI(chainID int64, ksLocation string, noUSB bool, ui SignerUI, abi
 	if advancedMode {
 		log.Info("Clef is in advanced mode: will warn instead of reject")
 	}
-	if !noUSB {
-		// Start a USB hub for Ledger hardware wallets
-		if ledgerhub, err := usbwallet.NewLedgerHub(); err != nil {
-			log.Warn(fmt.Sprintf("Failed to start Ledger hub, disabling: %v", err))
-		} else {
-			backends = append(backends, ledgerhub)
-			log.Debug("Ledger support enabled")
-		}
-		// Start a USB hub for Trezor hardware wallets
-		if trezorhub, err := usbwallet.NewTrezorHub(); err != nil {
-			log.Warn(fmt.Sprintf("Failed to start Trezor hub, disabling: %v", err))
-		} else {
-			backends = append(backends, trezorhub)
-			log.Debug("Trezor support enabled")
-		}
-	}
+	// if !noUSB {
+	// 	// Start a USB hub for Ledger hardware wallets
+	// 	if ledgerhub, err := usbwallet.NewLedgerHub(); err != nil {
+	// 		log.Warn(fmt.Sprintf("Failed to start Ledger hub, disabling: %v", err))
+	// 	} else {
+	// 		backends = append(backends, ledgerhub)
+	// 		log.Debug("Ledger support enabled")
+	// 	}
+	// 	// Start a USB hub for Trezor hardware wallets
+	// 	if trezorhub, err := usbwallet.NewTrezorHub(); err != nil {
+	// 		log.Warn(fmt.Sprintf("Failed to start Trezor hub, disabling: %v", err))
+	// 	} else {
+	// 		backends = append(backends, trezorhub)
+	// 		log.Debug("Trezor support enabled")
+	// 	}
+	// }
 	signer := &SignerAPI{big.NewInt(chainID), accounts.NewManager(backends...), ui, NewValidator(abidb), !advancedMode}
 	if !noUSB {
 		signer.startUSBListener()
@@ -302,9 +301,9 @@ func (api *SignerAPI) startUSBListener() {
 		for _, wallet := range am.Wallets() {
 			if err := wallet.Open(""); err != nil {
 				log.Warn("Failed to open wallet", "url", wallet.URL(), "err", err)
-				if err == usbwallet.ErrTrezorPINNeeded {
-					go api.openTrezor(wallet.URL())
-				}
+				// if err == usbwallet.ErrTrezorPINNeeded {
+				// 	go api.openTrezor(wallet.URL())
+				// }
 			}
 		}
 		// Listen for wallet event till termination
@@ -313,9 +312,9 @@ func (api *SignerAPI) startUSBListener() {
 			case accounts.WalletArrived:
 				if err := event.Wallet.Open(""); err != nil {
 					log.Warn("New wallet appeared, failed to open", "url", event.Wallet.URL(), "err", err)
-					if err == usbwallet.ErrTrezorPINNeeded {
-						go api.openTrezor(event.Wallet.URL())
-					}
+					// if err == usbwallet.ErrTrezorPINNeeded {
+					// 	go api.openTrezor(event.Wallet.URL())
+					// }
 				}
 			case accounts.WalletOpened:
 				status, _ := event.Wallet.Status()
