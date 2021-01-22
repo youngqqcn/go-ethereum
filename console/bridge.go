@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/usbwallet"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/robertkrimen/otto"
@@ -105,9 +104,9 @@ func (b *bridge) OpenWallet(call otto.FunctionCall) (response otto.Value) {
 		return val
 	}
 	// Wallet open failed, report error unless it's a PIN entry
-	if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
-		throwJSException(err.Error())
-	}
+	// if !strings.HasSuffix(err.Error(), usbwallet.ErrTrezorPINNeeded.Error()) {
+	// 	throwJSException(err.Error())
+	// }
 	// Trezor PIN matrix input requested, display the matrix to the user and fetch the data
 	fmt.Fprintf(b.printer, "Look at the device for number positions\n\n")
 	fmt.Fprintf(b.printer, "7 | 8 | 9\n")
