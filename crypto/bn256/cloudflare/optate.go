@@ -1,3 +1,4 @@
+// +build ignore
 package bn256
 
 func lineFunctionAdd(r, p *twistPoint, q *curvePoint, r2 *gfP2) (a, b, c *gfP2, rOut *twistPoint) {

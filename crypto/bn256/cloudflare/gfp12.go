@@ -1,3 +1,4 @@
+// +build ignore
 package bn256
 
 // For details of the algorithms used, see "Multiplication and Squaring on

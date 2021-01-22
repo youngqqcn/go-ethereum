@@ -94,6 +94,8 @@ It has these top-level messages:
 	DebugLinkMemoryWrite
 	DebugLinkFlashErase
 */
+
+// +build ignore
 package trezor
 
 import proto "github.com/golang/protobuf/proto"

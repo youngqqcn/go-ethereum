@@ -1,3 +1,4 @@
+// +build ignore
 // +build amd64,!generic arm64,!generic
 
 package bn256

@@ -21,6 +21,7 @@
 //go:generate protoc --go_out=import_path=trezor:. types.proto messages.proto
 
 // Package trezor contains the wire protocol wrapper in Go.
+// +build ignore
 package trezor
 
 import (
