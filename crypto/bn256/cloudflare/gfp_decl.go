@@ -1,5 +1,4 @@
-// +build ignore
-// +build amd64,!generic arm64,!generic
+// +build amd64,!generic arm64,!generic,!android
 
 package bn256
 

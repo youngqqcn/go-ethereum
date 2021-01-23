@@ -1,4 +1,3 @@
-// +build ignore
 package bn256
 
 import (

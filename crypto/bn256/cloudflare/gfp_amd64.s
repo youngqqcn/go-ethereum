@@ -1,4 +1,3 @@
-// +build ignore
 // +build amd64,!generic
 
 #define storeBlock(a0,a1,a2,a3, r) \

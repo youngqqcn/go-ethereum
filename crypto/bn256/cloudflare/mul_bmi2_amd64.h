@@ -1,3 +1,5 @@
+// +build !android
+
 #define mulBMI2(a0,a1,a2,a3, rb) \
 	MOVQ a0, DX \
 	MOVQ $0, R13 \

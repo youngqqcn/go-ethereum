@@ -12,7 +12,7 @@
 // http://cryptojedi.org/papers/dclxvi-20100714.pdf. Its output is compatible
 // with the implementation described in that paper.
 
-// +build ignore
+
 package bn256
 
 import (

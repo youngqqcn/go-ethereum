@@ -1,3 +1,6 @@
+
+// +build !android
+
 #define mul(a0,a1,a2,a3, rb, stack) \
 	MOVQ a0, AX \
 	MULQ 0+rb \

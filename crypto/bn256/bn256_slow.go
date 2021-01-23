@@ -3,7 +3,7 @@
 // in the LICENSE file.
 
 
-// //build !amd64,!arm64
+// +build !amd64,!arm64 android
 
 // Package bn256 implements the Optimal Ate pairing over a 256-bit Barreto-Naehrig curve.
 package bn256
