@@ -340,7 +340,7 @@ func (d *Downloader) UnregisterPeer(id string) error {
 // Synchronise tries to sync up our local block chain with a remote peer, both
 // adding various sanity checks as well as wrapping it with various log entries.
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
-	err := d.synchronise(id, head, td, mode)
+	err := d.synchronise(id, head, td, mode) // 同步区块
 
 	switch err {
 	case nil, errBusy, errCanceled:
@@ -391,7 +391,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 	// If snap sync was requested, create the snap scheduler and switch to fast
 	// sync mode. Long term we could drop fast sync or merge the two together,
 	// but until snap becomes prevalent, we should support both. TODO(karalabe).
-	if mode == SnapSync {
+	if mode == SnapSync { // 快照
 		if !d.snapSync {
 			log.Warn("Enabling snapshot sync prototype")
 			d.snapSync = true

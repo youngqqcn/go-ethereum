@@ -321,11 +321,11 @@ func prepare(ctx *cli.Context) {
 	// Cap the cache allowance and tune the garbage collector
 	mem, err := gopsutil.VirtualMemory()
 	if err == nil {
-		if 32<<(^uintptr(0)>>63) == 32 && mem.Total > 2*1024*1024*1024 {
+		if 32<<(^uintptr(0)>>63) == 32 && mem.Total > 2*1024*1024*1024 { // 判断是否是 32位系统, 如果是32bit系统, 最大可寻址地址空间2G
 			log.Warn("Lowering memory allowance on 32bit arch", "available", mem.Total/1024/1024, "addressable", 2*1024)
 			mem.Total = 2 * 1024 * 1024 * 1024
 		}
-		allowance := int(mem.Total / 1024 / 1024 / 3)
+		allowance := int(mem.Total / 1024 / 1024 / 3) // 最多用 1/3 的内存
 		if cache := ctx.GlobalInt(utils.CacheFlag.Name); cache > allowance {
 			log.Warn("Sanitizing cache to Go's GC limits", "provided", cache, "updated", allowance)
 			ctx.GlobalSet(utils.CacheFlag.Name, strconv.Itoa(allowance))
@@ -348,6 +348,7 @@ func prepare(ctx *cli.Context) {
 // geth is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
+// 阻塞
 func geth(ctx *cli.Context) error {
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])

@@ -86,11 +86,14 @@ type StateDB struct {
 	// by StateDB.Commit.
 	dbErr error
 
+	// 用于统计退还的gas
 	// The refund counter, also used by state transitioning.
 	refund uint64
 
 	thash, bhash common.Hash
 	txIndex      int
+
+	// 日志, 如: evm执行的logs
 	logs         map[common.Hash][]*types.Log
 	logSize      uint
 
@@ -101,10 +104,12 @@ type StateDB struct {
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
-	journal        *journal
+	journal        *journal // 状态修改的日志,用于事务
+
 	validRevisions []revision
 	nextRevisionId int
 
+	// 统计各种操作的耗时, 用于调试
 	// Measurements gathered during execution for debugging purposes
 	AccountReads         time.Duration
 	AccountHashes        time.Duration

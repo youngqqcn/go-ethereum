@@ -45,7 +45,7 @@ var (
 	initCommand = cli.Command{
 		Action:    utils.MigrateFlags(initGenesis),
 		Name:      "init",
-		Usage:     "Bootstrap and initialize a new genesis block",
+		Usage:     "Bootstrap and initialize a new genesis block", //
 		ArgsUsage: "<genesisPath>",
 		Flags: []cli.Flag{
 			utils.DataDirFlag,
@@ -184,7 +184,7 @@ The first argument must be the directory containing the blockchain to download f
 Remove blockchain and state databases`,
 	}
 	dumpCommand = cli.Command{
-		Action:    utils.MigrateFlags(dump),
+		Action:    utils.MigrateFlags(dump),  // 转储某个区块
 		Name:      "dump",
 		Usage:     "Dump a specific block from storage",
 		ArgsUsage: "[<blockHash> | <blockNum>]...",
@@ -261,7 +261,7 @@ func initGenesis(ctx *cli.Context) error {
 }
 
 func dumpGenesis(ctx *cli.Context) error {
-	genesis := utils.MakeGenesis(ctx)
+	genesis := utils.MakeGenesis(ctx)  // 获取不同链的genesis
 	if genesis == nil {
 		genesis = core.DefaultGenesisBlock()
 	}
@@ -271,6 +271,7 @@ func dumpGenesis(ctx *cli.Context) error {
 	return nil
 }
 
+// 导入
 func importChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
@@ -370,6 +371,7 @@ func importChain(ctx *cli.Context) error {
 	return importErr
 }
 
+// 导出
 func exportChain(ctx *cli.Context) error {
 	if len(ctx.Args()) < 1 {
 		utils.Fatalf("This command requires an argument.")
@@ -384,7 +386,7 @@ func exportChain(ctx *cli.Context) error {
 	var err error
 	fp := ctx.Args().First()
 	if len(ctx.Args()) < 3 {
-		err = utils.ExportChain(chain, fp)
+		err = utils.ExportChain(chain, fp) // 导出链数据到 gz文件
 	} else {
 		// This can be improved to allow for numbers larger than 9223372036854775807
 		first, ferr := strconv.ParseInt(ctx.Args().Get(1), 10, 64)
@@ -395,6 +397,7 @@ func exportChain(ctx *cli.Context) error {
 		if first < 0 || last < 0 {
 			utils.Fatalf("Export error: block number must be greater than 0\n")
 		}
+		// 以追加的方式导出
 		err = utils.ExportAppendChain(chain, fp, uint64(first), uint64(last))
 	}
 
@@ -473,6 +476,8 @@ func copyDb(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// 创建peer
 	peer := downloader.NewFakePeer("local", db, hc, dl)
 	if err = dl.RegisterPeer("local", 63, peer); err != nil {
 		return err
@@ -481,6 +486,8 @@ func copyDb(ctx *cli.Context) error {
 	start := time.Now()
 
 	currentHeader := hc.CurrentHeader()
+
+	// 开始同步
 	if err = dl.Synchronise("local", currentHeader.Hash(), hc.GetTd(currentHeader.Hash(), currentHeader.Number.Uint64()), syncMode); err != nil {
 		return err
 	}
@@ -559,6 +566,8 @@ func confirmAndRemoveDB(database string, kind string) {
 	}
 }
 
+
+// 转储某个区块
 func dump(ctx *cli.Context) error {
 	stack, _ := makeConfigNode(ctx)
 	defer stack.Close()

@@ -193,6 +193,9 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 	if ethash.config.PowMode == ModeFullFake {
 		return nil
 	}
+
+
+	// 一个区块最多包含2个叔块
 	// Verify that there are at most 2 uncles included in this block
 	if len(block.Uncles()) > maxUncles {
 		return errTooManyUncles
@@ -220,6 +223,8 @@ func (ethash *Ethash) VerifyUncles(chain consensus.ChainReader, block *types.Blo
 
 	// Verify each of the uncles that it's recent, but not an ancestor
 	for _, uncle := range block.Uncles() {
+
+		// 保证每个叔块只被奖励一次
 		// Make sure every uncle is rewarded only once
 		hash := uncle.Hash()
 		if uncles.Contains(hash) {
@@ -258,6 +263,9 @@ func (ethash *Ethash) verifyHeader(chain consensus.ChainHeaderReader, header, pa
 	if header.Time <= parent.Time {
 		return errOlderBlockTime
 	}
+
+
+	// 计算难度值
 	// Verify the block's difficulty based on its timestamp and parent's difficulty
 	expected := ethash.CalcDifficulty(chain, header.Time, parent)
 
@@ -392,6 +400,7 @@ func makeDifficultyCalculator(bombDelay *big.Int) func(time uint64, parent *type
 		periodCount := fakeBlockNumber
 		periodCount.Div(periodCount, expDiffPeriod)
 
+		// ============ 难度炸弹 =================
 		// the exponential factor, commonly referred to as "the bomb"
 		// diff = diff + 2^(periodCount - 2)
 		if periodCount.Cmp(big1) > 0 {

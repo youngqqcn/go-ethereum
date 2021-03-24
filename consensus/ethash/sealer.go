@@ -79,7 +79,7 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 	}
 	ethash.lock.Unlock()
 	if threads == 0 {
-		threads = runtime.NumCPU()
+		threads = runtime.NumCPU()  // 根据CPU数 产生线程
 	}
 	if threads < 0 {
 		threads = 0 // Allows disabling local mining without extra logic around local/remote
@@ -92,6 +92,9 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 		pend   sync.WaitGroup
 		locals = make(chan *types.Block)
 	)
+
+
+	// 开始挖矿
 	for i := 0; i < threads; i++ {
 		pend.Add(1)
 		go func(id int, nonce uint64) {
@@ -99,6 +102,8 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 			ethash.mine(block, id, nonce, abort, locals)
 		}(i, uint64(ethash.rand.Int63()))
 	}
+
+	// 等待结果
 	// Wait until sealing is terminated or a nonce is found
 	go func() {
 		var result *types.Block
@@ -109,7 +114,7 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 		case result = <-locals:
 			// One of the threads found a block, abort all others
 			select {
-			case results <- result:
+			case results <- result:  // 等待结果
 			default:
 				ethash.config.Log.Warn("Sealing result is not read by miner", "mode", "local", "sealhash", ethash.SealHash(block.Header()))
 			}
@@ -127,6 +132,7 @@ func (ethash *Ethash) Seal(chain consensus.ChainHeaderReader, block *types.Block
 	return nil
 }
 
+// 挖矿核心逻辑, 根据种子计算nonce
 // mine is the actual proof-of-work miner that searches for a nonce starting from
 // seed that results in correct final block difficulty.
 func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan struct{}, found chan *types.Block) {
@@ -136,7 +142,7 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 		hash    = ethash.SealHash(header).Bytes()
 		target  = new(big.Int).Div(two256, header.Difficulty)
 		number  = header.Number.Uint64()
-		dataset = ethash.dataset(number, false)
+		dataset = ethash.dataset(number, false) // 同步生成DAG数据
 	)
 	// Start generating random nonces until we abort or find a good one
 	var (
@@ -148,7 +154,7 @@ func (ethash *Ethash) mine(block *types.Block, id int, seed uint64, abort chan s
 search:
 	for {
 		select {
-		case <-abort:
+		case <-abort: // 什么情况下会终止呢?  应该是接收到其他矿工
 			// Mining terminated, update stats and abort
 			logger.Trace("Ethash nonce search aborted", "attempts", nonce-seed)
 			ethash.hashrate.Mark(attempts)
@@ -161,9 +167,11 @@ search:
 				ethash.hashrate.Mark(attempts)
 				attempts = 0
 			}
+
+			// ================== Ethash的核心逻辑 =================
 			// Compute the PoW value of this nonce
 			digest, result := hashimotoFull(dataset.dataset, hash, nonce)
-			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {
+			if new(big.Int).SetBytes(result).Cmp(target) <= 0 {  // 如果找到了nonce
 				// Correct nonce found, create a new header with it
 				header = types.CopyHeader(header)
 				header.Nonce = types.EncodeNonce(nonce)
@@ -171,14 +179,14 @@ search:
 
 				// Seal and return a block (if still needed)
 				select {
-				case found <- block.WithSeal(header):
+				case found <- block.WithSeal(header):  // 通知找到了nonce
 					logger.Trace("Ethash nonce found and reported", "attempts", nonce-seed, "nonce", nonce)
 				case <-abort:
 					logger.Trace("Ethash nonce found but discarded", "attempts", nonce-seed, "nonce", nonce)
 				}
 				break search
 			}
-			nonce++
+			nonce++  // 继续尝试
 		}
 	}
 	// Datasets are unmapped in a finalizer. Ensure that the dataset stays live

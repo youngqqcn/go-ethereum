@@ -35,16 +35,20 @@ type Config struct {
 
 // Manager is an overarching account manager that can communicate with various
 // backends for signing transactions.
+// 主要的账户管理, 可以和不同的Backend交互(例如: keystore, usbwallet, scwallet(smart card))
 type Manager struct {
 	config   *Config                    // Global account manager configurations
-	backends map[reflect.Type][]Backend // Index of backends currently registered
-	updaters []event.Subscription       // Wallet update subscriptions for all backends
+	backends map[reflect.Type][]Backend // Index of backends currently registered  backends
+	updaters []event.Subscription       // Wallet update subscriptions for all backends  更新订阅
 	updates  chan WalletEvent           // Subscription sink for backend wallet changes
 	wallets  []Wallet                   // Cache of all wallets from all registered backends
 
+	// 通知  到达/离开
 	feed event.Feed // Wallet feed notifying of arrivals/departures
 
+	// 退出
 	quit chan chan error
+
 	lock sync.RWMutex
 }
 
@@ -82,6 +86,7 @@ func NewManager(config *Config, backends ...Backend) *Manager {
 }
 
 // Close terminates the account manager's internal notification processes.
+// 关闭
 func (am *Manager) Close() error {
 	errc := make(chan error)
 	am.quit <- errc
@@ -89,12 +94,14 @@ func (am *Manager) Close() error {
 }
 
 // Config returns the configuration of account manager.
+// 获取配置
 func (am *Manager) Config() *Config {
 	return am.config
 }
 
 // update is the wallet event loop listening for notifications from the backends
 // and updating the cache of wallets.
+// 更新
 func (am *Manager) update() {
 	// Close all subscriptions when the manager terminates
 	defer func() {
@@ -107,6 +114,7 @@ func (am *Manager) update() {
 	}()
 
 	// Loop until termination
+	// 循环
 	for {
 		select {
 		case event := <-am.updates:
@@ -121,6 +129,7 @@ func (am *Manager) update() {
 			am.lock.Unlock()
 
 			// Notify any listeners of the event
+			// 推送事件给监听者
 			am.feed.Send(event)
 
 		case errc := <-am.quit:
@@ -132,11 +141,13 @@ func (am *Manager) update() {
 }
 
 // Backends retrieves the backend(s) with the given type from the account manager.
+// 获取又有backends
 func (am *Manager) Backends(kind reflect.Type) []Backend {
 	return am.backends[kind]
 }
 
 // Wallets returns all signer accounts registered under this account manager.
+// 获取钱包
 func (am *Manager) Wallets() []Wallet {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
@@ -153,7 +164,7 @@ func (am *Manager) walletsNoLock() []Wallet {
 
 // Wallet retrieves the wallet associated with a particular URL.
 func (am *Manager) Wallet(url string) (Wallet, error) {
-	am.lock.RLock()
+	am.lock.RLock() // 获取锁
 	defer am.lock.RUnlock()
 
 	parsed, err := parseURL(url)
@@ -169,6 +180,7 @@ func (am *Manager) Wallet(url string) (Wallet, error) {
 }
 
 // Accounts returns all account addresses of all wallets within the account manager
+// 返回所有账户地址
 func (am *Manager) Accounts() []common.Address {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
@@ -185,6 +197,7 @@ func (am *Manager) Accounts() []common.Address {
 // Find attempts to locate the wallet corresponding to a specific account. Since
 // accounts can be dynamically added to and removed from wallets, this method has
 // a linear runtime in the number of wallets.
+// 查找
 func (am *Manager) Find(account Account) (Wallet, error) {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
@@ -199,6 +212,7 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 
 // Subscribe creates an async subscription to receive notifications when the
 // manager detects the arrival or departure of a wallet from any of its backends.
+// 订阅(异步)
 func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
 	return am.feed.Subscribe(sink)
 }
@@ -207,6 +221,7 @@ func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
 // origin list is preserved by inserting new wallets at the correct position.
 //
 // The original slice is assumed to be already sorted by URL.
+// 合并钱包
 func merge(slice []Wallet, wallets ...Wallet) []Wallet {
 	for _, wallet := range wallets {
 		n := sort.Search(len(slice), func(i int) bool { return slice[i].URL().Cmp(wallet.URL()) >= 0 })
@@ -221,6 +236,7 @@ func merge(slice []Wallet, wallets ...Wallet) []Wallet {
 
 // drop is the couterpart of merge, which looks up wallets from within the sorted
 // cache and removes the ones specified.
+// 删除
 func drop(slice []Wallet, wallets ...Wallet) []Wallet {
 	for _, wallet := range wallets {
 		n := sort.Search(len(slice), func(i int) bool { return slice[i].URL().Cmp(wallet.URL()) >= 0 })

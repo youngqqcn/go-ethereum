@@ -22,10 +22,12 @@ import "fmt"
 // It is a uint32 as it is used with atomic operations.
 type SyncMode uint32
 
+
+// 几种不同的同步方式
 const (
 	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
-	FastSync                  // Quickly download the headers, full sync only at the chain
-	SnapSync                  // Download the chain and the state via compact snapshots
+	FastSync                  // Quickly download the headers, full sync only at the chain  快速同步
+	SnapSync                  // Download the chain and the state via compact snapshots   快照同步
 	LightSync                 // Download only the headers and terminate afterwards
 )
 

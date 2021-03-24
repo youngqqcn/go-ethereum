@@ -31,8 +31,8 @@ import (
 // Account represents an Ethereum account located at a specific location defined
 // by the optional URL field.
 type Account struct {
-	Address common.Address `json:"address"` // Ethereum account address derived from the key
-	URL     URL            `json:"url"`     // Optional resource locator within a backend
+	Address common.Address `json:"address"` // 20字节地址, 从key派生出  Ethereum account address derived from the key
+	URL     URL            `json:"url"`     // 可选  Optional resource locator within a backend
 }
 
 const (
@@ -44,6 +44,7 @@ const (
 
 // Wallet represents a software or hardware wallet that might contain one or more
 // accounts (derived from the same seed).
+// 软硬件钱包, 可以包含多个账户(从相同的种子派生的 HD钱包)
 type Wallet interface {
 	// URL retrieves the canonical path under which this wallet is reachable. It is
 	// user by upper layers to define a sorting order over all wallets from multiple
@@ -66,22 +67,29 @@ type Wallet interface {
 	//
 	// Please note, if you open a wallet, you must close it to release any allocated
 	// resources (especially important when working with hardware wallets).
+	// 打开钱包
 	Open(passphrase string) error
 
 	// Close releases any resources held by an open wallet instance.
+	// 关闭钱包, 释放资源
 	Close() error
 
 	// Accounts retrieves the list of signing accounts the wallet is currently aware
 	// of. For hierarchical deterministic wallets, the list will not be exhaustive,
 	// rather only contain the accounts explicitly pinned during account derivation.
+	//  列出账户信息,
+	//  如果是HD钱包, 可能不会列出所有的, 而是只列出 pinned 的账户
 	Accounts() []Account
 
 	// Contains returns whether an account is part of this particular wallet or not.
+	// 判断账户是否存在
 	Contains(account Account) bool
 
 	// Derive attempts to explicitly derive a hierarchical deterministic account at
 	// the specified derivation path. If requested, the derived account will be added
 	// to the wallet's tracked account list.
+	// 派生地址
+	//  pin的作用 参考Accounts() 方法,
 	Derive(path DerivationPath, pin bool) (Account, error)
 
 	// SelfDerive sets a base account derivation path from which the wallet attempts
@@ -98,6 +106,8 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
+	//
+	//
 	SelfDerive(bases []DerivationPath, chain ethereum.ChainStateReader)
 
 	// SignData requests the wallet to sign the hash of the given data
@@ -110,12 +120,17 @@ type Wallet interface {
 	// about which fields or actions are needed. The user may retry by providing
 	// the needed details via SignDataWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
+	//
+	// 对 Hash(data) 进行签名, 如果需要密码则返回 AuthNeededError 错误
+	//
 	SignData(account Account, mimeType string, data []byte) ([]byte, error)
 
 	// SignDataWithPassphrase is identical to SignData, but also takes a password
 	// NOTE: there's an chance that an erroneous call might mistake the two strings, and
 	// supply password in the mimetype field, or vice versa. Thus, an implementation
 	// should never echo the mimetype or return the mimetype in the error-response
+	//
+	// 需要密码的签名
 	SignDataWithPassphrase(account Account, passphrase, mimeType string, data []byte) ([]byte, error)
 
 	// SignText requests the wallet to sign the hash of a given piece of data, prefixed
@@ -131,6 +146,7 @@ type Wallet interface {
 	// the account in a keystore).
 	//
 	// This method should return the signature in 'canonical' format, with v 0 or 1
+	// 对text进行签名
 	SignText(account Account, text []byte) ([]byte, error)
 
 	// SignTextWithPassphrase is identical to Signtext, but also takes a password
@@ -147,9 +163,12 @@ type Wallet interface {
 	// about which fields or actions are needed. The user may retry by providing
 	// the needed details via SignTxWithPassphrase, or by other means (e.g. unlock
 	// the account in a keystore).
+	//
+	// 交易签名
 	SignTx(account Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 
 	// SignTxWithPassphrase is identical to SignTx, but also takes a password
+	// 交易签名
 	SignTxWithPassphrase(account Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error)
 }
 
@@ -206,13 +225,16 @@ type WalletEventType int
 const (
 	// WalletArrived is fired when a new wallet is detected either via USB or via
 	// a filesystem event in the keystore.
+	// 钱包事件
 	WalletArrived WalletEventType = iota
 
 	// WalletOpened is fired when a wallet is successfully opened with the purpose
 	// of starting any background processes such as automatic key derivation.
+	//  钱包打开事件
 	WalletOpened
 
 	// WalletDropped
+	// 钱包删除事件
 	WalletDropped
 )
 

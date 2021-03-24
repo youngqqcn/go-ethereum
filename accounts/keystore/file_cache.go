@@ -65,6 +65,7 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set, mapset.Set, mapset.Set, er
 		// Gather the set of all and fresly modified files
 		all.Add(path)
 
+		// 判断文件是否有改动, 如果有改动则需要更新账户
 		modified := fi.ModTime()
 		if modified.After(fc.lastMod) {
 			mods.Add(path)

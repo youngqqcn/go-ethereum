@@ -339,6 +339,8 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 			}
 		}
 	}
+
+	//
 	// The first thing the node will do is reconstruct the verification data for
 	// the head block (ethash cache or clique voting snapshot). Might as well do
 	// it in advance.
@@ -417,6 +419,7 @@ func (bc *BlockChain) empty() bool {
 	return true
 }
 
+// 从数据库中加载最新的状态, 假设已经获取了互斥锁
 // loadLastState loads the last known chain state from the database. This method
 // assumes that the chain manager mutex is held.
 func (bc *BlockChain) loadLastState() error {
@@ -1072,6 +1075,7 @@ func (bc *BlockChain) procFutureBlocks() {
 		})
 		// Insert one by one as chain insertion needs contiguous ancestry between blocks
 		for i := range blocks {
+			// 插入到链中
 			bc.InsertChain(blocks[i : i+1])
 		}
 	}
@@ -1601,6 +1605,8 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	if reorg {
 		// Reorganise the chain if the parent is not the head block
 		if block.ParentHash() != currentBlock.Hash() {
+
+			// 进行重构, 将区块加入规范链中
 			if err := bc.reorg(currentBlock, block); err != nil {
 				return NonStatTy, err
 			}
@@ -1613,8 +1619,12 @@ func (bc *BlockChain) writeBlockWithState(block *types.Block, receipts []*types.
 	if status == CanonStatTy {
 		bc.writeHeadBlock(block)
 	}
+
+	// 在未来区块缓存中删除当前区块
 	bc.futureBlocks.Remove(block.Hash())
 
+
+	// 发送相关事件
 	if status == CanonStatTy {
 		bc.chainFeed.Send(ChainEvent{Block: block, Hash: block.Hash(), Logs: logs})
 		if len(logs) > 0 {
@@ -1697,10 +1707,15 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 // is imported, but then new canon-head is added before the actual sidechain
 // completes, then the historic state could be pruned again
 func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, error) {
+
+
+	// 如果链正在停止, 则不启动
 	// If the chain is terminating, don't even bother starting up
 	if atomic.LoadInt32(&bc.procInterrupt) == 1 {
 		return 0, nil
 	}
+
+	// 开启一个并行的签名恢复
 	// Start a parallel signature recovery (signer will fluke on fork transition, minimal perf loss)
 	senderCacher.recoverFromBlocks(types.MakeSigner(bc.chainConfig, chain[0].Number()), chain)
 
@@ -1708,6 +1723,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		stats     = insertStats{startTime: mclock.Now()}
 		lastCanon *types.Block
 	)
+
+	// 触发一个head事件, 如果我们的链变长了
 	// Fire a single chain head event if we've progressed the chain
 	defer func() {
 		if lastCanon != nil && bc.CurrentBlock().Hash() == lastCanon.Hash() {
@@ -1722,6 +1739,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 		headers[i] = block.Header()
 		seals[i] = verifySeals
 	}
+
+
+	// =============== 验证区块头
 	abort, results := bc.engine.VerifyHeaders(bc, headers, seals)
 	defer close(abort)
 
@@ -1881,6 +1901,9 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 				}(time.Now(), followup, throwaway, &followupInterrupt)
 			}
 		}
+
+
+		//  =============== 处理
 		// Process block using the parent state as reference point
 		substart := time.Now()
 		receipts, logs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
@@ -1902,6 +1925,8 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 
 		blockExecutionTimer.Update(time.Since(substart) - trieproc - triehash)
 
+
+		// ===================== 验证状态
 		// Validate the state using the default validator
 		substart = time.Now()
 		if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
@@ -2121,6 +2146,7 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 		deletedLogs [][]*types.Log
 		rebirthLogs [][]*types.Log
 
+		// //=================== 重构会删除一些logs
 		// collectLogs collects the logs that were generated or removed during
 		// the processing of the block that corresponds with the given hash.
 		// These logs are later announced as deleted or reborn
@@ -2256,6 +2282,8 @@ func (bc *BlockChain) reorg(oldBlock, newBlock *types.Block) error {
 	if err := indexesBatch.Write(); err != nil {
 		log.Crit("Failed to delete useless indexes", "err", err)
 	}
+
+	//=================== 重构会删除一些logs
 	// If any logs need to be fired, do it now. In theory we could avoid creating
 	// this goroutine if there are no events to fire, but realistcally that only
 	// ever happens if we're reorging empty blocks, which will only happen on idle

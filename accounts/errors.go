@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// 定义错误
 
 package accounts
 
@@ -56,6 +57,7 @@ type AuthNeededError struct {
 
 // NewAuthNeededError creates a new authentication error with the extra details
 // about the needed fields set.
+// 需要额外的授权
 func NewAuthNeededError(needed string) error {
 	return &AuthNeededError{
 		Needed: needed,

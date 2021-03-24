@@ -191,6 +191,8 @@ nodes.
 	}
 )
 
+
+// 列出所有账户
 func accountList(ctx *cli.Context) error {
 	stack, _ := makeConfigNode(ctx)
 	var index int
@@ -203,6 +205,8 @@ func accountList(ctx *cli.Context) error {
 	return nil
 }
 
+
+// 解锁
 // tries unlocking the specified account a few times.
 func unlockAccount(ks *keystore.KeyStore, address string, i int, passwords []string) (accounts.Account, string) {
 	account, err := utils.MakeAddress(ks, address)
@@ -232,6 +236,7 @@ func unlockAccount(ks *keystore.KeyStore, address string, i int, passwords []str
 	return accounts.Account{}, ""
 }
 
+// 地址恢复
 func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrError, auth string) accounts.Account {
 	fmt.Printf("Multiple key files exist for address %x:\n", err.Addr)
 	for _, a := range err.Matches {
@@ -258,6 +263,8 @@ func ambiguousAddrRecovery(ks *keystore.KeyStore, err *keystore.AmbiguousAddrErr
 	return *match
 }
 
+
+// 创建账户
 // accountCreate creates a new account into the keystore defined by the CLI flags.
 func accountCreate(ctx *cli.Context) error {
 	cfg := gethConfig{Node: defaultNodeConfig()}
@@ -291,6 +298,7 @@ func accountCreate(ctx *cli.Context) error {
 	return nil
 }
 
+//  账户更新(密码)
 // accountUpdate transitions an account from a previous format to the current
 // one, also providing the possibility to change the pass-phrase.
 func accountUpdate(ctx *cli.Context) error {
@@ -310,6 +318,7 @@ func accountUpdate(ctx *cli.Context) error {
 	return nil
 }
 
+// 导入钱包
 func importWallet(ctx *cli.Context) error {
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {
@@ -332,6 +341,7 @@ func importWallet(ctx *cli.Context) error {
 	return nil
 }
 
+// 账户导入
 func accountImport(ctx *cli.Context) error {
 	keyfile := ctx.Args().First()
 	if len(keyfile) == 0 {

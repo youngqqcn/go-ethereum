@@ -227,7 +227,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	go worker.mainLoop()
 	go worker.newWorkLoop(recommit)
 	go worker.resultLoop()
-	go worker.taskLoop()
+	go worker.taskLoop() // 挖矿
 
 	// Submit first work to initialize pending state.
 	if init {
@@ -551,7 +551,11 @@ func (w *worker) taskLoop() {
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
+
+			// 获取前一个盖章的hash
 			// Reject duplicate sealing work due to resubmitting.
+			//
+			// SealHash returns the hash of a block prior to it being sealed.
 			sealHash := w.engine.SealHash(task.block.Header())
 			if sealHash == prev {
 				continue
@@ -567,6 +571,7 @@ func (w *worker) taskLoop() {
 			w.pendingTasks[sealHash] = task
 			w.pendingMu.Unlock()
 
+			// 盖章
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
 				log.Warn("Block sealing failed", "err", err)
 			}
@@ -887,6 +892,9 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		}
 		header.Coinbase = w.coinbase
 	}
+
+
+	// ===================> 调用共识引擎的 Prepare , 准备共识
 	if err := w.engine.Prepare(w.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
@@ -988,6 +996,12 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	// Deep copy receipts here to avoid interaction between different tasks.
 	receipts := copyReceipts(w.current.receipts)
 	s := w.current.state.Copy()
+
+	// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block
+	// rewards) and assembles the final block.
+	//
+	// Note: The block header and state database might be updated to reflect any
+	// consensus rules that happen at finalization (e.g. block rewards).
 	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, uncles, receipts)
 	if err != nil {
 		return err

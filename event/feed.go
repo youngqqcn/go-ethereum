@@ -69,6 +69,7 @@ func (f *Feed) init() {
 //
 // The channel should have ample buffer space to avoid blocking other subscribers.
 // Slow subscribers are not dropped.
+// 事件订阅
 func (f *Feed) Subscribe(channel interface{}) Subscription {
 	f.once.Do(f.init)
 

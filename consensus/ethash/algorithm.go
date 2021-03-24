@@ -333,6 +333,7 @@ func generateDataset(dest []uint32, epoch uint64, cache []uint32) {
 	pend.Wait()
 }
 
+// 计算根据nonce计算hash
 // hashimoto aggregates data from the full dataset in order to produce our final
 // value for a particular header hash and nonce.
 func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32) []uint32) ([]byte, []byte) {
@@ -355,13 +356,15 @@ func hashimoto(hash []byte, nonce uint64, size uint64, lookup func(index uint32)
 	// Mix in random dataset nodes
 	temp := make([]uint32, len(mix))
 
+	// 进行64轮循环
 	for i := 0; i < loopAccesses; i++ {
 		parent := fnv(uint32(i)^seedHead, mix[i%len(mix)]) % rows
 		for j := uint32(0); j < mixBytes/hashBytes; j++ {
-			copy(temp[j*hashWords:], lookup(2*parent+j))
+			copy(temp[j*hashWords:], lookup(2*parent+j))  // 调用lookup函数
 		}
 		fnvHash(mix, temp)
 	}
+
 	// Compress mix
 	for i := 0; i < len(mix); i += 4 {
 		mix[i/4] = fnv(fnv(fnv(mix[i], mix[i+1]), mix[i+2]), mix[i+3])
