@@ -105,8 +105,8 @@ type handler struct {
 
 	downloader   *downloader.Downloader
 	stateBloom   *trie.SyncBloom
-	blockFetcher *fetcher.BlockFetcher
-	txFetcher    *fetcher.TxFetcher
+	blockFetcher *fetcher.BlockFetcher // 区块fetcher
+	txFetcher    *fetcher.TxFetcher // 交易fetcher
 	peers        *peerSet
 
 	eventMux      *event.TypeMux
@@ -256,6 +256,7 @@ func (h *handler) runEthPeer(peer *eth.Peer, handler eth.Handler) error {
 	}
 	peer.Log().Debug("Ethereum peer connected", "name", peer.Name())
 
+	// 注册peer
 	// Register the peer locally
 	if err := h.peers.registerEthPeer(peer); err != nil {
 		peer.Log().Error("Ethereum peer registration failed", "err", err)

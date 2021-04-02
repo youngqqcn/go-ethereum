@@ -256,6 +256,9 @@ func (f *TxFetcher) Notify(peer string, hashes []common.Hash) error {
 	}
 }
 
+//Enqueue将一批接收到的事务导入到事务池中
+//和提取程序。交易广播和直接请求回复。差异很重要，因此提取程序可以
+// 尽快重新处理丢失的交易。
 // Enqueue imports a batch of received transaction into the transaction pool
 // and the fetcher. This method may be called by both transaction broadcasts and
 // direct request replies. The differentiation is important so the fetcher can
@@ -312,6 +315,7 @@ func (f *TxFetcher) Enqueue(peer string, txs []*types.Transaction, direct bool) 
 		txBroadcastUnderpricedMeter.Mark(underpriced)
 		txBroadcastOtherRejectMeter.Mark(otherreject)
 	}
+
 	select {
 	case f.cleanup <- &txDelivery{origin: peer, hashes: added, direct: direct}:
 		return nil
@@ -331,6 +335,7 @@ func (f *TxFetcher) Drop(peer string) error {
 	}
 }
 
+// 启动循环
 // Start boots up the announcement based synchroniser, accepting and processing
 // hash notifications and block fetches until termination requested.
 func (f *TxFetcher) Start() {
@@ -343,17 +348,21 @@ func (f *TxFetcher) Stop() {
 	close(f.quit)
 }
 
+// 主循环
 func (f *TxFetcher) loop() {
 	var (
+		// 两个定时器
 		waitTimer    = new(mclock.Timer)
 		timeoutTimer = new(mclock.Timer)
 
 		waitTrigger    = make(chan struct{}, 1)
 		timeoutTrigger = make(chan struct{}, 1)
 	)
+
 	for {
 		select {
 		case ann := <-f.notify:
+			// 有新的交易
 			// Drop part of the new announcements if there are too many accumulated.
 			// Note, we could but do not filter already known transactions here as
 			// the probability of something arriving between this call and the pre-
@@ -438,6 +447,7 @@ func (f *TxFetcher) loop() {
 			}
 
 		case <-waitTrigger:
+			// 等待时间到了
 			// At least one transaction's waiting time ran out, push all expired
 			// ones into the retrieval queues
 			actives := make(map[string]struct{})
@@ -474,6 +484,7 @@ func (f *TxFetcher) loop() {
 			}
 
 		case <-timeoutTrigger:
+			// 清理超时的
 			// Clean up any expired retrievals and avoid re-requesting them from the
 			// same peer (either overloaded or malicious, useless in both cases). We
 			// could also penalize (Drop), but there's nothing to gain, and if could
@@ -520,6 +531,7 @@ func (f *TxFetcher) loop() {
 			f.rescheduleTimeout(timeoutTimer, timeoutTrigger)
 
 		case delivery := <-f.cleanup:
+			// 已经发送
 			// Independent if the delivery was direct or broadcast, remove all
 			// traces of the hash from internal trackers
 			for _, hash := range delivery.hashes {
@@ -613,6 +625,7 @@ func (f *TxFetcher) loop() {
 			}
 
 		case drop := <-f.drop:
+			// 删除
 			// A peer was dropped, remove all traces of it
 			if _, ok := f.waitslots[drop.peer]; ok {
 				for hash := range f.waitslots[drop.peer] {
@@ -666,8 +679,10 @@ func (f *TxFetcher) loop() {
 			}
 
 		case <-f.quit:
+			// 退出
 			return
 		}
+
 		// No idea what happened, but bump some sanity metrics
 		txFetcherWaitingPeers.Update(int64(len(f.waitslots)))
 		txFetcherWaitingHashes.Update(int64(len(f.waitlist)))

@@ -188,6 +188,7 @@ func (q *queue) Close() {
 	q.lock.Unlock()
 }
 
+// PendingHeaders检索待处理的标头请求的数量。
 // PendingHeaders retrieves the number of header requests pending for retrieval.
 func (q *queue) PendingHeaders() int {
 	q.lock.Lock()
@@ -196,6 +197,7 @@ func (q *queue) PendingHeaders() int {
 	return q.headerTaskQueue.Size()
 }
 
+// PendingBlocks检索待处理的块（主体）请求的数量。
 // PendingBlocks retrieves the number of block (body) requests pending for retrieval.
 func (q *queue) PendingBlocks() int {
 	q.lock.Lock()
@@ -204,6 +206,7 @@ func (q *queue) PendingBlocks() int {
 	return q.blockTaskQueue.Size()
 }
 
+// PendingReceipts检索待处理的块收据的数量。 
 // PendingReceipts retrieves the number of block receipts pending for retrieval.
 func (q *queue) PendingReceipts() int {
 	q.lock.Lock()
@@ -250,6 +253,8 @@ func (q *queue) Idle() bool {
 	return (queued + pending) == 0
 }
 
+// ScheduleSkeleton将一批标头检索任务添加到队列中以进行填充建立一个已检索的标头框架。
+// 
 // ScheduleSkeleton adds a batch of header retrieval tasks to the queue to fill
 // up an already retrieved header skeleton.
 func (q *queue) ScheduleSkeleton(from uint64, skeleton []*types.Header) {
@@ -333,6 +338,9 @@ func (q *queue) Schedule(headers []*types.Header, from uint64) []*types.Header {
 	return inserts
 }
 
+// 结果从中检索并永久删除一批提取结果缓存。如果队列已关闭，则结果片将为空。
+// 结果可以与“传递”和“时间表”同时调用，假设没有两个同时调用Results的调用者
+//
 // Results retrieves and permanently removes a batch of fetch results from
 // the cache. the result slice will be empty if the queue has been closed.
 // Results can be called concurrently with Deliver and Schedule,

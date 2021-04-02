@@ -115,6 +115,7 @@ func MakeProtocols(backend Backend, network uint64, dnsdisc enode.Iterator) []p2
 				peer := NewPeer(version, p, rw, backend.TxPool())
 				defer peer.Close()
 
+				// 运行peer
 				return backend.RunPeer(peer, func(peer *Peer) error {
 					return Handle(backend, peer)
 				})

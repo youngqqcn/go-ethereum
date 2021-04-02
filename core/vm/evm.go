@@ -118,6 +118,12 @@ type TxContext struct {
 	GasPrice *big.Int       // Provides information for GASPRICE
 }
 
+
+// EVM是以太坊虚拟机的基础对象, 提供了必要的工具以根据给定的带上下文的state运行合约
+// 应该注意,任何调用合约过程中发生的错误都应该被当作rever-state-and-consume-all-gas(回滚状态,消耗掉所有gas)
+// 不要检查特定错误. 解释器要确保所有产生的错误应该当成错误码,
+// EVM 不是线程安全的,
+//
 // EVM is the Ethereum Virtual Machine base object and provides
 // the necessary tools to run a contract on the given state with
 // the provided context. It should be noted that any error

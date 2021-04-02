@@ -247,8 +247,8 @@ func New(checkpoint uint64, stateDb ethdb.Database, stateBloom *trie.SyncBloom, 
 		},
 		trackStateReq: make(chan *stateReq),
 	}
-	go dl.qosTuner()
-	go dl.stateFetcher()
+	go dl.qosTuner() // 统计
+	go dl.stateFetcher() // 
 	return dl
 }
 
@@ -563,13 +563,16 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 		func() error { return d.fetchReceipts(origin + 1) }, // Receipts are retrieved during fast sync
 		func() error { return d.processHeaders(origin+1, td) },
 	}
-	if mode == FastSync {
+
+	// 快速同步
+	if mode == FastSync { 
 		d.pivotLock.Lock()
 		d.pivotHeader = pivot
 		d.pivotLock.Unlock()
 
 		fetchers = append(fetchers, func() error { return d.processFastSyncContent() })
 	} else if mode == FullSync {
+		// 全节点同步
 		fetchers = append(fetchers, d.processFullSyncContent)
 	}
 	return d.spawnSync(fetchers)
@@ -582,6 +585,8 @@ func (d *Downloader) spawnSync(fetchers []func() error) error {
 	d.cancelWg.Add(len(fetchers))
 	for _, fn := range fetchers {
 		fn := fn
+
+		// 启动fetchers
 		go func() { defer d.cancelWg.Done(); errc <- fn() }()
 	}
 	// Wait for the first error, then terminate the others.

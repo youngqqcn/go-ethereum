@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+// 以太坊协议版本
 // Constants to match up protocol versions and messages
 const (
 	ETH64 = 64

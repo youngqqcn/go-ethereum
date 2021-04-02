@@ -330,6 +330,9 @@ func (f *BlockFetcher) FilterBodies(peer string, transactions [][]*types.Transac
 // Loop is the main fetcher loop, checking and processing various notification
 // events.
 func (f *BlockFetcher) loop() {
+
+
+	// 两个定时器
 	// Iterate the block fetching until a quit is requested
 	fetchTimer := time.NewTimer(0)
 	completeTimer := time.NewTimer(0)
@@ -337,14 +340,17 @@ func (f *BlockFetcher) loop() {
 	defer completeTimer.Stop()
 
 	for {
+		 // 清理所有过期的fetch
 		// Clean up any expired block fetches
 		for hash, announce := range f.fetching {
 			if time.Since(announce.time) > fetchTimeout {
 				f.forgetHash(hash)
 			}
 		}
+
+		// 导入区块
 		// Import any queued blocks that could potentially fit
-		height := f.chainHeight()
+		height := f.chainHeight() // 当前区块
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*blockOrHeaderInject)
 			hash := op.hash()
@@ -354,7 +360,7 @@ func (f *BlockFetcher) loop() {
 			// If too high up the chain or phase, continue later
 			number := op.number()
 			if number > height+1 {
-				f.queue.Push(op, -int64(number))
+				f.queue.Push(op, -int64(number)) // 区块高度的相反数, queue是一个大根堆
 				if f.queueChangeHook != nil {
 					f.queueChangeHook(hash, true)
 				}
@@ -365,19 +371,22 @@ func (f *BlockFetcher) loop() {
 				f.forgetBlock(hash)
 				continue
 			}
-			if f.light {
+			if f.light { // 轻节点只导入区块头
 				f.importHeaders(op.origin, op.header)
-			} else {
+			} else { // 导入区块
 				f.importBlocks(op.origin, op.block)
 			}
 		}
+
+		// 等待外部事件发生
 		// Wait for an outside event to occur
 		select {
-		case <-f.quit:
+		case <-f.quit: // 结束
 			// BlockFetcher terminating, abort all operations
 			return
 
 		case notification := <-f.notify:
+			// 区块通知
 			// A block was announced, make sure the peer isn't DOSing us
 			blockAnnounceInMeter.Mark(1)
 
@@ -387,6 +396,8 @@ func (f *BlockFetcher) loop() {
 				blockAnnounceDOSMeter.Mark(1)
 				break
 			}
+
+			// 如果我们有一个有效的块号，请检查它是否可能有用
 			// If we have a valid block number, check that it's potentially useful
 			if notification.number > 0 {
 				if dist := int64(notification.number) - int64(f.chainHeight()); dist < -maxUncleDist || dist > maxQueueDist {
@@ -395,6 +406,8 @@ func (f *BlockFetcher) loop() {
 					break
 				}
 			}
+
+			// 一切正常，如果尚未下载块，请安排发布
 			// All is well, schedule the announce if block's not yet downloading
 			if _, ok := f.fetching[notification.hash]; ok {
 				break
@@ -411,10 +424,12 @@ func (f *BlockFetcher) loop() {
 				f.rescheduleFetch(fetchTimer)
 			}
 
-		case op := <-f.inject:
+		case op := <-f.inject: 
+			// 请求直接插入块，尝试填补所有未决的空白 
 			// A direct block insertion was requested, try and fill any pending gaps
 			blockBroadcastInMeter.Mark(1)
 
+			// 轻节点仅允许直接块注入，如果我们收到,默默地删除标头注入
 			// Now only direct block injection is allowed, drop the header injection
 			// here silently if we receive.
 			if f.light {
@@ -422,12 +437,15 @@ func (f *BlockFetcher) loop() {
 			}
 			f.enqueue(op.origin, nil, op.block)
 
-		case hash := <-f.done:
+		case hash := <-f.done: 
+			// 待完成的导入已完成，请删除该通知的所有痕迹 
 			// A pending import finished, remove all traces of the notification
 			f.forgetHash(hash)
 			f.forgetBlock(hash)
 
 		case <-fetchTimer.C:
+
+			// 至少一个块的计时器用完了，检查是否需要检索 
 			// At least one block's timer ran out, check for needing retrieval
 			request := make(map[string][]common.Hash)
 
@@ -470,6 +488,7 @@ func (f *BlockFetcher) loop() {
 			f.rescheduleFetch(fetchTimer)
 
 		case <-completeTimer.C:
+			// 至少有一个标头的计时器用尽，检索所有内容
 			// At least one header's timer ran out, retrieve everything
 			request := make(map[string][]common.Hash)
 
@@ -591,6 +610,7 @@ func (f *BlockFetcher) loop() {
 			}
 
 		case filter := <-f.bodyFilter:
+			// 区块体
 			// Block bodies arrived, extract any explicitly requested blocks, return the rest
 			var task *bodyFilterTask
 			select {

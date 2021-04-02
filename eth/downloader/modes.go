@@ -25,10 +25,10 @@ type SyncMode uint32
 
 // 几种不同的同步方式
 const (
-	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks
+	FullSync  SyncMode = iota // Synchronise the entire blockchain history from full blocks  全节点
 	FastSync                  // Quickly download the headers, full sync only at the chain  快速同步
 	SnapSync                  // Download the chain and the state via compact snapshots   快照同步
-	LightSync                 // Download only the headers and terminate afterwards
+	LightSync                 // Download only the headers and terminate afterwards  轻节点
 )
 
 func (mode SyncMode) IsValid() bool {
